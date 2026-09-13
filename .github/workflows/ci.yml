@@ -21,6 +21,7 @@ jobs:
 
       - name: Build and test
         run: mvn -B clean verify
+        working-directory: ./tourism-service
 
   # Verifies the exact bootstrap scenario your existing production database will go
   # through: a schema created the old way (ddl-auto=update), then a second boot with
