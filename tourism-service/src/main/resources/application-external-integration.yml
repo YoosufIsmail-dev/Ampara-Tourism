@@ -1,0 +1,19 @@
+# External Data Integration Layer
+# Keep secrets in environment variables / deployment secret manager.
+integration:
+  google:
+    base-url: https://maps.googleapis.com
+    api-key: ${GOOGLE_MAPS_API_KEY:}
+  meteo:
+    base-url: https://meteo.gov.lk
+    weather-path: ${METEO_WEATHER_PATH:}
+  bustimetable:
+    base-url: https://bustimetable.lk
+  timekeeper:
+    base-url: https://www.timekeeper.lk
+
+# Recommended TTLs
+cache:
+  weather-minutes: 10
+  routes-minutes: 5
+  scheduled-timetables-minutes: 10

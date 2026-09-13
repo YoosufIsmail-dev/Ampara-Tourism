@@ -1,0 +1,107 @@
+/* Shared, lightweight, mobile-first styles for the Ampara Tourism frontend pages. */
+:root {
+  --brand: #0f766e;
+  --brand-dark: #0b5a54;
+  --brand-light: #e6f4f2;
+  --bg: #f4f7f6;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* --- Top nav, shared across pages --- */
+.app-nav {
+  background: var(--brand);
+  color: #fff;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.app-nav .brand { font-weight: 700; font-size: 15px; white-space: nowrap; }
+.app-nav a {
+  color: #eafffb;
+  text-decoration: none;
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+.app-nav a:hover, .app-nav a.active { background: rgba(255,255,255,0.15); }
+.app-nav .nav-links { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
+.app-nav .lang-switcher { display: flex; gap: 4px; margin-left: auto; }
+
+/* --- Language switcher buttons --- */
+.lang-btn {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.lang-btn.active { background: #fff; color: var(--brand-dark); font-weight: 600; }
+
+/* --- Generic page shell --- */
+.page-shell { max-width: 1000px; margin: 0 auto; padding: 16px; }
+.card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+h1.page-title { font-size: 20px; margin: 4px 0 16px; }
+.muted { color: var(--muted); font-size: 13px; }
+.badge {
+  display: inline-block;
+  background: var(--brand-light);
+  color: var(--brand-dark);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+button.primary-btn {
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+}
+button.primary-btn:hover { background: var(--brand-dark); }
+button.ghost-btn {
+  background: #fff;
+  color: var(--brand);
+  border: 1px solid var(--brand);
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+input, select {
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+/* --- Mobile-friendly breakpoints --- */
+@media (max-width: 640px) {
+  .app-nav { padding: 8px 10px; gap: 8px; }
+  .app-nav .nav-links { order: 3; width: 100%; justify-content: flex-start; gap: 2px; }
+  .app-nav .nav-links a { font-size: 12px; padding: 5px 6px; }
+  .page-shell { padding: 10px; }
+  h1.page-title { font-size: 17px; }
+}

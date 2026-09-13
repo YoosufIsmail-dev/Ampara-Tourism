@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ampara Tourism - Analytics</title>
+<link rel="stylesheet" href="/css/app.css" />
+<style>
+  .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .stat-box { flex: 1; min-width: 120px; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+  .stat-box .num { font-size: 22px; font-weight: 700; color: var(--brand-dark); }
+  .stat-box .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .chart-box { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  .chart-box h3 { margin: 0 0 8px; font-size: 13px; color: var(--text); }
+  .chart-box canvas { max-height: 260px; }
+  #loginBox { max-width: 320px; margin: 40px auto; }
+  #loginBox .field { margin-bottom: 10px; }
+  #loginBox label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+
+  @media (max-width: 720px) {
+    .chart-grid { grid-template-columns: 1fr; }
+  }
+</style>
+<link rel="stylesheet" href="/css/redesign.css">
+</head>
+<body>
+<nav class="app-nav" id="app-nav"></nav>
+<div class="page-shell">
+  <h1 class="page-title" data-i18n="nav.analytics">Analytics</h1>
+
+  <div id="loginBox" class="card" style="display:none;">
+    <p class="muted">Admin sign-in required to view analytics.</p>
+    <div class="field"><label>Email</label><input id="loginEmail" type="email" /></div>
+    <div class="field"><label>Password</label><input id="loginPassword" type="password" /></div>
+    <button class="primary-btn" id="loginBtn" style="width:100%;">Sign in</button>
+    <p id="loginError" class="muted" style="color:#b91c1c;"></p>
+  </div>
+
+  <div id="dashboard" style="display:none;">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <label style="font-size:12px;">Window:
+          <select id="windowDays" style="width:auto;display:inline-block;margin-left:6px;">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </label>
+        <button class="ghost-btn" id="logoutBtn">Sign out</button>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-box"><div class="num" id="totalViews">-</div><div class="lbl">Total views</div></div>
+      <div class="stat-box"><div class="num" id="windowDaysLabel">-</div><div class="lbl">Day window</div></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-box"><h3>Top places</h3><canvas id="chartPlaces"></canvas></div>
+      <div class="chart-box"><h3>Top categories</h3><canvas id="chartCategories"></canvas></div>
+      <div class="chart-box"><h3>Top towns</h3><canvas id="chartTowns"></canvas></div>
+      <div class="chart-box"><h3>Language breakdown</h3><canvas id="chartLanguages"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+AmparaCommon.renderNav('/analytics.html');
+
+const PALETTE = ['#0f766e','#14b8a6','#0e7490','#65a30d','#ca8a04','#dc2626','#7c3aed','#db2777'];
+let charts = {};
+
+function token() { return localStorage.getItem('adminToken') || ''; }
+
+function showLogin() {
+  document.getElementById('loginBox').style.display = 'block';
+  document.getElementById('dashboard').style.display = 'none';
+}
+function showDashboard() {
+  document.getElementById('loginBox').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  loadDashboard();
+}
+
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    if (!res.ok) { errEl.textContent = 'Login failed - check credentials.'; return; }
+    const data = await res.json();
+    if (!data.token) { errEl.textContent = 'Unexpected login response.'; return; }
+    localStorage.setItem('adminToken', data.token);
+    showDashboard();
+  } catch (e) {
+    errEl.textContent = 'Could not reach the server.';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('adminToken');
+  showLogin();
+});
+
+document.getElementById('windowDays').addEventListener('change', loadDashboard);
+
+function makeBarChart(ctx, labels, values, label) {
+  return new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label, data: values, backgroundColor: PALETTE[0] }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+}
+function makeDoughnut(ctx, labels, values) {
+  return new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: PALETTE }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+}
+
+async function loadDashboard() {
+  const days = document.getElementById('windowDays').value;
+  const res = await fetch('/api/analytics/dashboard?days=' + days, {
+    headers: { Authorization: 'Bearer ' + token() }
+  });
+  if (res.status === 401 || res.status === 403) { showLogin(); return; }
+  if (!res.ok) return;
+  const d = await res.json();
+
+  document.getElementById('totalViews').textContent = d.totalViews ?? 0;
+  document.getElementById('windowDaysLabel').textContent = d.windowDays ?? days;
+
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+
+  const places = d.topPlaces || [];
+  charts.places = makeBarChart(document.getElementById('chartPlaces'),
+    places.map(p => p.placeName || ('#' + p.placeId)), places.map(p => p.viewCount), 'Views');
+
+  const categories = d.topCategories || [];
+  charts.categories = makeBarChart(document.getElementById('chartCategories'),
+    categories.map(c => c.category), categories.map(c => c.viewCount), 'Views');
+
+  const towns = d.topTowns || [];
+  charts.towns = makeBarChart(document.getElementById('chartTowns'),
+    towns.map(t => t.town), towns.map(t => t.viewCount), 'Views');
+
+  const langs = d.languageBreakdown || [];
+  charts.languages = makeDoughnut(document.getElementById('chartLanguages'),
+    langs.map(l => l.language), langs.map(l => l.viewCount));
+}
+
+if (token()) { showDashboard(); } else { showLogin(); }
+</script>
+<script src="/js/ui-enhancements.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+
+.weather-adaptive-banner{display:flex;gap:.8rem;align-items:flex-start;padding:1rem;border-radius:16px;margin:1rem 0;border:1px solid rgba(0,0,0,.08);background:rgba(0,0,0,.025)}
+.weather-adaptive-banner strong{display:block;margin-bottom:.25rem}
+.weather-adaptive-banner small{opacity:.7}
+.trip-weather-note{font-size:.85rem;opacity:.75;margin-top:.35rem}
+.trip-weather-note.warning{font-weight:700}

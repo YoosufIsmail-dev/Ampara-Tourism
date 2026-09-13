@@ -1,0 +1,98 @@
+# Production profile
+# IMPORTANT: Do not commit secrets to source control.
+app:
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:}
+  # No fallback here on purpose: application.properties defaults these to a dev-only
+  # JWT secret and "ChangeMe123!" admin password. If JWT_SECRET / ADMIN_PASSWORD are
+  # missing on Render, startup should fail loudly rather than silently run with
+  # insecure defaults in production.
+  jwt:
+    secret: ${JWT_SECRET}
+  admin:
+    password: ${ADMIN_PASSWORD}
+
+# Swagger/OpenAPI exposes the full API surface (paths, DTOs, admin routes) to anyone
+# on the internet. Off by default in prod; set SWAGGER_ENABLED=true temporarily if a
+# teammate needs it, then unset it again.
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
+integration:
+  google:
+    base-url: ${GOOGLE_MAPS_BASE_URL:https://maps.googleapis.com}
+    api-key: ${GOOGLE_MAPS_API_KEY}
+  meteo:
+    base-url: ${METEO_BASE_URL:https://meteo.gov.lk}
+    weather-path: ${METEO_WEATHER_PATH:}
+  bustimetable:
+    base-url: ${BUSTIMETABLE_BASE_URL:https://bustimetable.lk}
+  timekeeper:
+    base-url: ${TIMEKEEPER_BASE_URL:https://www.timekeeper.lk}
+
+# Keep database credentials out of this file too.
+spring:
+  datasource:
+    # Render exposes database host/port/name/user/password directly; build a JDBC URL here.
+    # No fallback values on purpose: if any of these are missing in production, startup
+    # should fail loudly instead of silently trying localhost/postgres:postgres.
+    url: jdbc:postgresql://${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:20}
+      minimum-idle: ${DB_MIN_IDLE:5}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:30000}
+      validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:5000}
+      idle-timeout: ${DB_IDLE_TIMEOUT_MS:600000}
+      max-lifetime: ${DB_MAX_LIFETIME_MS:1800000}
+  h2:
+    console:
+      enabled: false
+  jpa:
+    # Production must not let Hibernate silently alter the schema on every boot.
+    # Flyway below owns schema changes; Hibernate only checks entities match it.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+  flyway:
+    enabled: true
+    # This deployment's schema was originally created by Hibernate's ddl-auto=update.
+    # baseline-on-migrate lets Flyway adopt that existing schema as "version 0" the
+    # first time it runs against a non-empty database, instead of failing because no
+    # migration history table exists yet. From then on, every schema change must ship
+    # as a new versioned file in src/main/resources/db/migration (see the README there).
+    baseline-on-migrate: true
+    baseline-version: 0
+    baseline-description: "Baseline: schema as created by ddl-auto=update before Flyway was introduced"
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+# HTTP/server hardening
+server:
+  shutdown: graceful
+  forward-headers-strategy: framework
+  compression:
+    enabled: true
+    mime-types: text/html,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
+    min-response-size: 1024
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never

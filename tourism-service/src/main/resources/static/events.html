@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ampara Tourism - Event Calendar</title>
+<link rel="stylesheet" href="/css/app.css" />
+<style>
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-header h2 { font-size: 16px; margin: 0; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-dow { text-align: center; font-size: 11px; color: var(--muted); text-transform: uppercase; padding: 4px 0; }
+  .cal-day {
+    min-height: 60px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    background: #fff;
+  }
+  .cal-day.empty { background: transparent; border-color: transparent; cursor: default; }
+  .cal-day.today { border-color: var(--brand); border-width: 2px; }
+  .cal-day.selected { background: var(--brand-light); }
+  .cal-day .day-num { font-weight: 600; margin-bottom: 3px; }
+  .cal-day .dot-row { display: flex; gap: 2px; flex-wrap: wrap; }
+  .cal-day .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+  .event-item { border-bottom: 1px solid var(--border); padding: 8px 0; }
+  .event-item:last-child { border-bottom: none; }
+  .event-item h4 { margin: 0 0 3px; font-size: 13px; }
+  .event-item .when { font-size: 12px; color: var(--muted); }
+
+  /* Mobile: collapse the grid into a scrollable, denser layout */
+  @media (max-width: 640px) {
+    .cal-day { min-height: 44px; font-size: 11px; padding: 3px; }
+    .cal-day .day-num { margin-bottom: 2px; }
+  }
+</style>
+<link rel="stylesheet" href="/css/redesign.css">
+</head>
+<body>
+<nav class="app-nav" id="app-nav"></nav>
+<div class="page-shell">
+  <h1 class="page-title" data-i18n="nav.events">Events</h1>
+
+  <div class="card">
+    <div class="cal-header">
+      <button class="ghost-btn" id="prevMonth">‹ Prev</button>
+      <h2 id="monthLabel"></h2>
+      <button class="ghost-btn" id="nextMonth">Next ›</button>
+    </div>
+    <div class="cal-grid" id="dowRow"></div>
+    <div class="cal-grid" id="calGrid" style="margin-top:4px;"></div>
+  </div>
+
+  <div class="card">
+    <h3 id="selectedDayLabel" style="margin-top:0;font-size:14px;"></h3>
+    <div id="selectedDayEvents"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;font-size:14px;" data-i18n="calendar.upcoming">Upcoming</h3>
+    <div id="upcomingEvents"><p class="muted">Loading…</p></div>
+  </div>
+</div>
+
+<script src="/js/common.js"></script>
+<script>
+AmparaCommon.renderNav('/events.html');
+
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+let viewDate = new Date();
+viewDate.setDate(1);
+let selectedDate = new Date();
+let monthEvents = [];
+
+document.getElementById('dowRow').innerHTML = DOW.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+function isoDate(d) { return d.toISOString().slice(0,10); }
+
+function fetchMonthEvents(year, month) {
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0, 23, 59, 59);
+  const url = `/api/events/range?start=${start.toISOString().slice(0,19)}&end=${end.toISOString().slice(0,19)}`;
+  return fetch(url).then(r => r.ok ? r.json() : []).catch(() => []);
+}
+
+function fetchUpcoming() {
+  fetch('/api/events/upcoming').then(r => r.ok ? r.json() : []).then(events => {
+    const box = document.getElementById('upcomingEvents');
+    if (!events.length) { box.innerHTML = '<p class="muted">No upcoming events.</p>'; return; }
+    box.innerHTML = events.slice(0, 8).map(eventItemHtml).join('');
+  }).catch(() => { document.getElementById('upcomingEvents').innerHTML = '<p class="muted">Could not load events.</p>'; });
+}
+
+function eventItemHtml(e) {
+  const when = e.startDateTime ? new Date(e.startDateTime).toLocaleString(undefined, { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '';
+  return `<div class="event-item">
+    <h4>${e.title || ''} ${e.category ? `<span class="badge">${e.category}</span>` : ''}</h4>
+    <div class="when">${when}${e.town ? ' · ' + e.town : ''}</div>
+    ${e.description ? `<div class="muted" style="margin-top:3px;">${e.description}</div>` : ''}
+  </div>`;
+}
+
+function renderCalendar() {
+  document.getElementById('monthLabel').textContent = viewDate.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayIso = isoDate(new Date());
+  const selectedIso = isoDate(selectedDate);
+
+  const eventsByDay = {};
+  monthEvents.forEach(e => {
+    if (!e.startDateTime) return;
+    const key = e.startDateTime.slice(0, 10);
+    (eventsByDay[key] = eventsByDay[key] || []).push(e);
+  });
+
+  let cells = '';
+  for (let i = 0; i < firstDow; i++) cells += '<div class="cal-day empty"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(year, month, d);
+    const iso = isoDate(dateObj);
+    const dayEvents = eventsByDay[iso] || [];
+    const classes = ['cal-day'];
+    if (iso === todayIso) classes.push('today');
+    if (iso === selectedIso) classes.push('selected');
+    cells += `<div class="${classes.join(' ')}" data-date="${iso}">
+      <div class="day-num">${d}</div>
+      <div class="dot-row">${dayEvents.slice(0,4).map(() => '<span class="dot"></span>').join('')}</div>
+    </div>`;
+  }
+  document.getElementById('calGrid').innerHTML = cells;
+  document.querySelectorAll('.cal-day[data-date]').forEach(cell => {
+    cell.addEventListener('click', () => {
+      selectedDate = new Date(cell.dataset.date + 'T00:00:00');
+      renderCalendar();
+      renderSelectedDay(eventsByDay[cell.dataset.date] || []);
+    });
+  });
+
+  renderSelectedDay(eventsByDay[selectedIso] || []);
+}
+
+function renderSelectedDay(events) {
+  document.getElementById('selectedDayLabel').textContent = selectedDate.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
+  const box = document.getElementById('selectedDayEvents');
+  box.innerHTML = events.length ? events.map(eventItemHtml).join('') : `<p class="muted" data-i18n="calendar.noEvents">No events on this day</p>`;
+}
+
+function loadMonth() {
+  fetchMonthEvents(viewDate.getFullYear(), viewDate.getMonth()).then(events => {
+    monthEvents = events;
+    renderCalendar();
+  });
+}
+
+document.getElementById('prevMonth').addEventListener('click', () => {
+  viewDate.setMonth(viewDate.getMonth() - 1);
+  loadMonth();
+});
+document.getElementById('nextMonth').addEventListener('click', () => {
+  viewDate.setMonth(viewDate.getMonth() + 1);
+  loadMonth();
+});
+
+loadMonth();
+fetchUpcoming();
+</script>
+<script src="/js/ui-enhancements.js"></script>
+</body>
+</html>

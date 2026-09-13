@@ -1,0 +1,10 @@
+# Local Secrets
+application-local.properties
+application-local.yml
+.env
+
+# Build & IDE
+target/
+.vscode/
+.idea/
+*.log

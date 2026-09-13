@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ampara Smart Tourism Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="/css/app.css" />
+<style>
+  :root { --brand:#0f766e; --brand-dark:#0b5a54; --bg:#f4f7f6; }
+  body { margin:0; }
+  #layout { display:flex; height: calc(100vh - 96px); }
+  #sidebar { width:320px; background:#fff; overflow-y:auto; border-right:1px solid #e5e7eb; padding:12px; flex-shrink:0; }
+  #map { flex:1; }
+  .field { margin-bottom:10px; }
+  .field label { display:block; font-size:12px; color:#555; margin-bottom:4px; }
+  .place-card { border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; margin-bottom:8px; cursor:pointer; transition:.15s; }
+  .place-card:hover { border-color: var(--brand); background:#f0fdfa; }
+  .place-card h3 { margin:0 0 2px; font-size:13px; }
+  .place-card .ta { color:#666; font-size:12px; margin:0 0 4px; }
+  .place-card .meta { font-size:11px; color:#888; }
+  #count { font-size:12px; color:#666; margin-left:auto; }
+  .toolbar { display:flex; align-items:center; gap:10px; padding:8px 16px; background:#fff; border-bottom:1px solid #e5e7eb; }
+  .popup-actions { margin-top:6px; display:flex; gap:6px; flex-wrap:wrap; }
+  .popup-actions a, .popup-actions button { font-size:12px; padding:5px 8px; border-radius:5px; border:1px solid var(--brand); background:#fff; color:var(--brand); text-decoration:none; cursor:pointer; }
+  .popup-actions a.primary, .popup-actions button.primary { background:var(--brand); color:#fff; }
+  #locBtn { background:#fff; color:var(--brand); border:1px solid var(--brand); padding:6px 10px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600; }
+  #nearbyBox { margin-top:14px; }
+  #nearbyBox h4 { font-size:12px; text-transform:uppercase; color:#888; margin:10px 0 6px; }
+
+  /* Mobile: stack sidebar above the map instead of side-by-side */
+  @media (max-width: 640px) {
+    #layout { flex-direction: column; height: auto; }
+    #sidebar { width: 100%; max-height: 40vh; border-right: none; border-bottom: 1px solid #e5e7eb; }
+    #map { height: 55vh; }
+    .toolbar { padding: 8px 10px; flex-wrap: wrap; }
+  }
+</style>
+<link rel="stylesheet" href="/css/redesign.css">
+</head>
+<body>
+<nav class="app-nav" id="app-nav"></nav>
+<div class="toolbar">
+  <button id="locBtn">📍 Use my location</button>
+  <span id="count"></span>
+</div>
+<div id="layout">
+  <div id="sidebar">
+    <div class="field">
+      <label>Search tourist place</label>
+      <input id="searchBox" placeholder="e.g. Arugam, Oluvil, கல்முனை..." />
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <select id="categoryFilter"><option value="">All categories</option></select>
+    </div>
+    <div class="field">
+      <label>Town</label>
+      <select id="townFilter"><option value="">All towns</option></select>
+    </div>
+    <div id="nearbyBox" style="display:none;">
+      <h4>Nearby you</h4>
+      <div id="nearbyList"></div>
+    </div>
+    <h4 style="font-size:12px;text-transform:uppercase;color:#888;margin:14px 0 6px;">Places (<span id="listCount">0</span>)</h4>
+    <div id="placeList"></div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/js/common.js"></script>
+<script>
+AmparaCommon.renderNav('/map.html');
+
+const map = L.map('map').setView([7.15, 81.75], 10); // Ampara district center
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors',
+  maxZoom: 18
+}).addTo(map);
+
+const markerLayer = L.layerGroup().addTo(map);
+let allPlaces = [];
+let userMarker = null;
+
+function categoryEmoji(cat) {
+  const map = { Beach:'🏖️', Temple:'🛕', Mosque:'🕌', Church:'⛪', Museum:'🏛️', Nature:'🌿',
+    Wildlife:'🐘', Lake:'🌊', Lagoon:'🚤', Waterfall:'💧', Camping:'⛺', Surfing:'🏄', Historical:'🏺', Harbour:'⚓' };
+  return map[cat] || '📍';
+}
+
+function fetchPlaces(params) {
+  const qs = new URLSearchParams(params).toString();
+  return fetch('/api/places' + (qs ? ('?' + qs) : '')).then(r => r.json());
+}
+
+function renderMarkers(places) {
+  markerLayer.clearLayers();
+  places.forEach(p => {
+    if (p.latitude == null || p.longitude == null) return;
+    const marker = L.marker([p.latitude, p.longitude]).addTo(markerLayer);
+    const stars = p.rating ? '⭐'.repeat(Math.round(p.rating)) : 'Not yet rated';
+    marker.bindPopup(`
+      <div style="min-width:200px">
+        <strong>${categoryEmoji(p.category)} ${p.name}</strong><br/>
+        ${p.tamilName ? `<span style="color:#666">${p.tamilName}</span><br/>` : ''}
+        <span class="badge">${p.category || ''}</span>
+        <div style="font-size:12px;margin-top:4px;">${stars}</div>
+        <div style="font-size:12px;color:#555;margin-top:4px;">Open: ${p.openingHours || 'N/A'} · ${p.town || ''}</div>
+        <div class="popup-actions">
+          <a class="primary" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}">Navigate</a>
+          <a href="#" onclick="showDetails(${p.id}); return false;">View Details</a>
+          <button onclick="playVoiceGuide(${p.id}, this); return false;">🔊 <span data-i18n="action.listen">Listen</span></button>
+        </div>
+      </div>
+    `);
+  });
+}
+
+function renderList(places) {
+  document.getElementById('listCount').textContent = places.length;
+  document.getElementById('count').textContent = places.length + ' places shown';
+  const list = document.getElementById('placeList');
+  list.innerHTML = '';
+  places.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'place-card';
+    div.innerHTML = `<h3>${categoryEmoji(p.category)} ${p.name}</h3>
+      ${p.tamilName ? `<p class="ta">${p.tamilName}</p>` : ''}
+      <span class="meta"><span class="badge">${p.category || ''}</span>${p.town || ''}</span>`;
+    div.onclick = () => {
+      if (p.latitude != null && p.longitude != null) {
+        map.setView([p.latitude, p.longitude], 15);
+        markerLayer.eachLayer(m => {
+          if (m.getLatLng().lat === p.latitude && m.getLatLng().lng === p.longitude) m.openPopup();
+        });
+      }
+    };
+    list.appendChild(div);
+  });
+}
+
+let voiceAudioEl = null;
+function playVoiceGuide(placeId, btn) {
+  const lang = AmparaCommon.currentLang();
+  const originalLabel = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ …';
+  fetch(`/api/voice-guide/places/${placeId}?lang=${lang}`)
+    .then(r => r.json())
+    .then(data => {
+      if (voiceAudioEl) { voiceAudioEl.pause(); voiceAudioEl = null; }
+      if (data.audioUrl) {
+        voiceAudioEl = new Audio(data.audioUrl);
+        voiceAudioEl.play().catch(() => speakWithBrowserTts(data.script, data.ttsLocale));
+      } else {
+        // OPENAI_API_KEY not configured server-side - read the script on-device instead.
+        speakWithBrowserTts(data.script, data.ttsLocale);
+      }
+    })
+    .catch(() => alert('Could not load the voice guide right now.'))
+    .finally(() => { btn.disabled = false; btn.innerHTML = originalLabel; });
+}
+
+function speakWithBrowserTts(text, locale) {
+  if (!text || !('speechSynthesis' in window)) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = locale || 'en-US';
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
+function showDetails(id) {
+  const p = allPlaces.find(x => x.id === id);
+  if (!p) return;
+  alert(`${p.name}${p.tamilName ? ' / ' + p.tamilName : ''}\n\n${p.descriptionEn || ''}\n\nCategory: ${p.category}\nTown: ${p.town}\nOpening hours: ${p.openingHours || 'N/A'}\nEntry fee: ${p.entryFee || 'N/A'}`);
+}
+
+function populateFilters(places) {
+  const categories = [...new Set(places.map(p => p.category).filter(Boolean))].sort();
+  const towns = [...new Set(places.map(p => p.town).filter(Boolean))].sort();
+  const catSel = document.getElementById('categoryFilter');
+  const townSel = document.getElementById('townFilter');
+  categories.forEach(c => catSel.innerHTML += `<option value="${c}">${categoryEmoji(c)} ${c}</option>`);
+  towns.forEach(t => townSel.innerHTML += `<option value="${t}">${t}</option>`);
+}
+
+function applyFilters() {
+  const search = document.getElementById('searchBox').value.trim().toLowerCase();
+  const cat = document.getElementById('categoryFilter').value;
+  const town = document.getElementById('townFilter').value;
+  let filtered = allPlaces;
+  if (cat) filtered = filtered.filter(p => p.category === cat);
+  if (town) filtered = filtered.filter(p => p.town === town);
+  if (search) filtered = filtered.filter(p =>
+    (p.name && p.name.toLowerCase().includes(search)) ||
+    (p.tamilName && p.tamilName.includes(search)));
+  renderMarkers(filtered);
+  renderList(filtered);
+}
+
+document.getElementById('searchBox').addEventListener('input', applyFilters);
+document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+document.getElementById('townFilter').addEventListener('change', applyFilters);
+
+document.getElementById('locBtn').addEventListener('click', () => {
+  if (!navigator.geolocation) { alert('Geolocation not supported by this browser.'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude, longitude } = pos.coords;
+    if (userMarker) map.removeLayer(userMarker);
+    userMarker = L.circleMarker([latitude, longitude], { radius: 8, color: '#2563eb', fillColor:'#3b82f6', fillOpacity: 0.9 })
+      .addTo(map).bindPopup('You are here').openPopup();
+    map.setView([latitude, longitude], 13);
+
+    fetch(`/api/places/nearby?lat=${latitude}&lng=${longitude}&limit=6`).then(r => r.json()).then(nearby => {
+      document.getElementById('nearbyBox').style.display = 'block';
+      const box = document.getElementById('nearbyList');
+      box.innerHTML = '';
+      nearby.forEach(p => {
+        const d = document.createElement('div');
+        d.className = 'place-card';
+        d.innerHTML = `<h3>${categoryEmoji(p.category)} ${p.name}</h3><span class="meta">${p.town || ''}</span>`;
+        d.onclick = () => { map.setView([p.latitude, p.longitude], 15); };
+        box.appendChild(d);
+      });
+    });
+  }, () => alert('Location permission denied.'));
+});
+
+fetchPlaces({}).then(places => {
+  allPlaces = places;
+  populateFilters(places);
+  renderMarkers(places);
+  renderList(places);
+});
+</script>
+<script src="/js/ui-enhancements.js"></script>
+</body>
+</html>

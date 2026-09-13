@@ -1,0 +1,66 @@
+services:
+  - type: web
+    name: ampara-tourism-service
+    env: docker
+    rootDir: ./tourism-service
+    dockerfilePath: ./Dockerfile
+    # Free plan spins the service down after 15 min idle (slow first request after
+    # that) and is fine for a demo, but not for real users. Set to 'starter' or
+    # higher before a public launch. See FINAL_HOSTING_CHECKLIST.md.
+    plan: starter
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_HOST
+        fromDatabase:
+          name: ampara-tourism-db
+          property: host
+      - key: DATABASE_PORT
+        fromDatabase:
+          name: ampara-tourism-db
+          property: port
+      - key: DATABASE_NAME
+        fromDatabase:
+          name: ampara-tourism-db
+          property: database
+      - key: DATABASE_USERNAME
+        fromDatabase:
+          name: ampara-tourism-db
+          property: user
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: ampara-tourism-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: WEATHER_API_KEY
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: APP_CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: METEO_WEATHER_PATH
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: FIREBASE_CREDENTIALS_BASE64
+        sync: false
+
+databases:
+  - name: ampara-tourism-db
+    # Free Postgres expires after 30 days with no backups — real bookings/reviews/users
+    # would be lost. basic-256mb is Render's smallest paid Postgres plan; size up in the
+    # dashboard later if you need more RAM/storage. Confirm automated backups are on
+    # before public launch (paid plans include them, but verify in the dashboard).
+    plan: basic-256mb
