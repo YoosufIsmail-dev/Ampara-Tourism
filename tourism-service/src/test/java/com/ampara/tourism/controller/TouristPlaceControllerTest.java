@@ -8,7 +8,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
+import org.springframework.test.context.ActiveProfiles;
 import java.util.List;
 
 import static org.mockito.Mockito.when;
@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(TouristPlaceController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
 class TouristPlaceControllerTest {
 
     @Autowired
