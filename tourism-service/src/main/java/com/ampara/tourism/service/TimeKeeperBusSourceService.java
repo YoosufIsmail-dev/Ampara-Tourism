@@ -119,8 +119,8 @@ public class TimeKeeperBusSourceService {
         return found;
     }
 
-    private String unavailable(String message) {
-        Map<String, Object> payload = new LinkedHashMap<>();
+     private Map<String, Object> unavailable(String message) {
+        payload = new LinkedHashMap<>();
         payload.put("status", "SOURCE_UNAVAILABLE");
         payload.put("source", SOURCE);
         payload.put("sourceUrl", baseUrl);
