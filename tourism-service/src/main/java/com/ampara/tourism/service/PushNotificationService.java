@@ -9,6 +9,7 @@ import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,13 +17,6 @@ import java.util.Map;
 
 /**
  * Registers device tokens and sends push notifications via Firebase Cloud Messaging.
- * Every registered device is auto-subscribed to two topics so admins can broadcast
- * without maintaining their own per-device fan-out:
- *  - "all-tourists": general announcements
- *  - "events": fired automatically whenever a new Event is created (see EventController)
- *
- * If Firebase isn't configured (see FirebaseConfig), sends are logged instead of fired
- * so the rest of the app keeps working with zero code changes once credentials are added.
  */
 @Service
 public class PushNotificationService {
@@ -35,7 +29,9 @@ public class PushNotificationService {
     private final DeviceTokenRepository deviceTokenRepository;
     private final FirebaseApp firebaseApp;
 
-    public PushNotificationService(DeviceTokenRepository deviceTokenRepository, FirebaseApp firebaseApp) {
+    // @Autowired(required = false) - FirebaseApp bean 
+    public PushNotificationService(DeviceTokenRepository deviceTokenRepository,
+                                   @Autowired(required = false) FirebaseApp firebaseApp) {
         this.deviceTokenRepository = deviceTokenRepository;
         this.firebaseApp = firebaseApp;
     }
@@ -61,7 +57,6 @@ public class PushNotificationService {
         unsubscribe(token, EVENTS_TOPIC);
     }
 
-    /** Send to a topic (e.g. "all-tourists" or "events"). Returns a status/message-id string. */
     public String sendToTopic(String topic, String title, String body, Map<String, String> data) {
         if (!isConfigured()) {
             log.info("[push-disabled] would send to topic '{}': {} - {}", topic, title, body);
