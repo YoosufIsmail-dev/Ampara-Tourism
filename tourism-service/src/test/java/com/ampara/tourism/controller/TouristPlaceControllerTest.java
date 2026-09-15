@@ -26,6 +26,8 @@ class TouristPlaceControllerTest {
 
     @MockitoBean
     private TouristPlaceRepository placeRepository;
+    @MockitoBean
+    private com.ampara.tourism.security.JwtUtil jwtUtil;
 
     private TouristPlace samplePlace() {
         TouristPlace p = new TouristPlace();

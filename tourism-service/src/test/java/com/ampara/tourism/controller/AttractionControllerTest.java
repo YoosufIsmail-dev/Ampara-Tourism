@@ -28,6 +28,8 @@ class AttractionControllerTest {
 
     @MockitoBean
     private AttractionRepository attractionRepository;
+    @MockitoBean
+    private com.ampara.tourism.security.JwtUtil jwtUtil;
 
     @Test
     void listReturnsAllAttractionsWhenNoFilterGiven() throws Exception {
