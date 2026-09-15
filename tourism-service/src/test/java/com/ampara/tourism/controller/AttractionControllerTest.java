@@ -17,7 +17,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AttractionController.class)
-@AutoConfigureMockMvc(addFilters = false) // security is tested separately; this exercises controller logic only
+@AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test") 
 class AttractionControllerTest {
 
     @Autowired
