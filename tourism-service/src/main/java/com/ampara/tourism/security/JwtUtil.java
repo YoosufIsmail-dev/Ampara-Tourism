@@ -21,6 +21,16 @@ public class JwtUtil {
     @Value("${app.jwt.expiration-ms:86400000}")
     private long expirationMs;
 
+        // Default constructor for Spring
+    public JwtUtil() {
+    }
+
+    // Constructor for testing and manual instantiation
+    public JwtUtil(String secret, long expirationMs) {
+        this.secret = secret;
+        this.expirationMs = expirationMs;
+    }
+
     private SecretKey key() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }

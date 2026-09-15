@@ -2,18 +2,20 @@ package com.ampara.tourism.security;
 
 import com.ampara.tourism.entity.Role;
 import com.ampara.tourism.entity.User;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-@ActiveProfiles("test")
 class JwtUtilTest {
 
-    @Autowired
     private JwtUtil jwtUtil;
+
+    @BeforeEach
+    void setUp() {
+        // Test-க்கு மட்டும் Dummy Secret மற்றும் Expiration
+        jwtUtil = new JwtUtil("test-secret-key-for-ci-testing-32-bytes-long", 86400000L);
+    }
 
     @Test
     void generatesTokenThatIsValidForTheSameUser() {

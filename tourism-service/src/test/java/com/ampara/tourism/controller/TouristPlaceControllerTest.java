@@ -2,13 +2,14 @@ package com.ampara.tourism.controller;
 
 import com.ampara.tourism.entity.TouristPlace;
 import com.ampara.tourism.repository.TouristPlaceRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
 import java.util.List;
 
 import static org.mockito.Mockito.when;
@@ -16,18 +17,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(TouristPlaceController.class)
-@AutoConfigureMockMvc(addFilters = false)
-@ActiveProfiles("test")
 class TouristPlaceControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @Mock
     private TouristPlaceRepository placeRepository;
-    @MockitoBean
-    private com.ampara.tourism.security.JwtUtil jwtUtil;
+
+    @InjectMocks
+    private TouristPlaceController touristPlaceController;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        mockMvc = MockMvcBuilders.standaloneSetup(touristPlaceController).build();
+    }
 
     private TouristPlace samplePlace() {
         TouristPlace p = new TouristPlace();

@@ -2,13 +2,13 @@ package com.ampara.tourism.controller;
 
 import com.ampara.tourism.entity.Attraction;
 import com.ampara.tourism.repository.AttractionRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
@@ -17,19 +17,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-
-@WebMvcTest(AttractionController.class)
-@AutoConfigureMockMvc(addFilters = false)
-@ActiveProfiles("test") 
 class AttractionControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @Mock
     private AttractionRepository attractionRepository;
-    @MockitoBean
-    private com.ampara.tourism.security.JwtUtil jwtUtil;
+
+    @InjectMocks
+    private AttractionController attractionController;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        mockMvc = MockMvcBuilders.standaloneSetup(attractionController).build();
+    }
 
     @Test
     void listReturnsAllAttractionsWhenNoFilterGiven() throws Exception {
