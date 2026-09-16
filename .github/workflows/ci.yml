@@ -50,6 +50,7 @@ jobs:
       JWT_SECRET: ci-only-secret-not-used-in-production-32bytes+
       ADMIN_PASSWORD: ci-only-password-not-used-in-production
       GOOGLE_MAPS_API_KEY: ci-only-dummy-key
+      OPENAI_API_KEY: ci-only-dummy-openai-key   # <-- இந்த வரி புதிதாகச் சேர்க்கப்பட்டுள்ளது
     steps:
       - uses: actions/checkout@v4
 
