@@ -60,18 +60,17 @@ jobs:
           distribution: "temurin"
           cache: maven
 
-     
       - name: Package application
         run: mvn -B clean package -DskipTests
         working-directory: ./tourism-service
 
-      
       - name: "Step 1: create schema the old way (simulates your existing live database)"
         working-directory: ./tourism-service
         run: |
           nohup java -jar target/*.jar \
             --spring.jpa.hibernate.ddl-auto=update \
             --spring.flyway.enabled=false \
+            --spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect \
             > step1.log 2>&1 &
           echo $! > app.pid
           for i in $(seq 1 30); do
@@ -84,11 +83,12 @@ jobs:
           kill "$(cat app.pid)" || true
           sleep 3
 
-     
       - name: "Step 2: reboot with ddl-auto=validate + Flyway baseline (this is what Render will actually run)"
         working-directory: ./tourism-service
         run: |
-          nohup java -jar target/*.jar > step2.log 2>&1 &
+          nohup java -jar target/*.jar \
+            --spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect \
+            > step2.log 2>&1 &
           echo $! > app.pid
           for i in $(seq 1 30); do
             if curl -sf http://localhost:8081/actuator/health > /dev/null; then
