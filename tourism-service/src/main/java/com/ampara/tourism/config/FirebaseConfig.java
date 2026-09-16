@@ -20,7 +20,7 @@ public class FirebaseConfig {
 
     @Bean
     public FirebaseApp firebaseApp() throws IOException {
-     
+        
         if (credentialsBase64 == null || credentialsBase64.isEmpty()) {
             return null;
         }
@@ -35,7 +35,7 @@ public class FirebaseConfig {
 
     @Bean
     public FirebaseMessaging firebaseMessaging(FirebaseApp firebaseApp) {
-      
+       
         if (firebaseApp == null) {
             return null;
         }
