@@ -23,11 +23,6 @@ jobs:
         run: mvn -B clean verify
         working-directory: ./tourism-service
 
-  # Verifies the exact bootstrap scenario your existing production database will go
-  # through: a schema created the old way (ddl-auto=update), then a second boot with
-  # ddl-auto=validate + Flyway baseline-on-migrate, the same as application-prod.yml.
-  # If this job fails, do NOT deploy — Hibernate found the entities don't match the
-  # schema, or Flyway's baseline step didn't work as expected.
   flyway-baseline-check:
     runs-on: ubuntu-latest
     needs: build
@@ -65,10 +60,14 @@ jobs:
           distribution: "temurin"
           cache: maven
 
+     
       - name: Package application
         run: mvn -B clean package -DskipTests
+        working-directory: ./tourism-service
 
+      
       - name: "Step 1: create schema the old way (simulates your existing live database)"
+        working-directory: ./tourism-service
         run: |
           nohup java -jar target/*.jar \
             --spring.jpa.hibernate.ddl-auto=update \
@@ -85,7 +84,9 @@ jobs:
           kill "$(cat app.pid)" || true
           sleep 3
 
+     
       - name: "Step 2: reboot with ddl-auto=validate + Flyway baseline (this is what Render will actually run)"
+        working-directory: ./tourism-service
         run: |
           nohup java -jar target/*.jar > step2.log 2>&1 &
           echo $! > app.pid
@@ -100,6 +101,7 @@ jobs:
 
       - name: Show logs on failure
         if: failure()
+        working-directory: ./tourism-service
         run: |
           echo "--- step1.log ---"; cat step1.log 2>/dev/null || true
           echo "--- step2.log ---"; cat step2.log 2>/dev/null || true
