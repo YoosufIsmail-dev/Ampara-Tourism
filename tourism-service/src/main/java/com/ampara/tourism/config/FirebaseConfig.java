@@ -20,7 +20,7 @@ public class FirebaseConfig {
 
     @Bean
     public FirebaseApp firebaseApp() throws IOException {
-      
+        // Credentials இல்லாதபோது null return செய்யவும்
         if (credentialsBase64 == null || credentialsBase64.isEmpty()) {
             return null;
         }
@@ -35,7 +35,7 @@ public class FirebaseConfig {
 
     @Bean
     public FirebaseMessaging firebaseMessaging(FirebaseApp firebaseApp) {
-     
+        // FirebaseApp null-ஆக இருந்தால், FirebaseMessaging-ஐ உருவாக்க வேண்டாம்
         if (firebaseApp == null) {
             return null;
         }
