@@ -57,21 +57,22 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-openai</artifactId>
         </dependency>
+
+        <!-- H2 for tests only (NOT bundled in production JAR) -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>runtime</scope>
+            <scope>test</scope>
         </dependency>
-        <!-- PostgreSQL driver for production (see application-prod.properties / README) -->
+
+        <!-- PostgreSQL driver for production -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Flyway: controlled schema migrations for production (replaces ddl-auto=update there).
-             flyway-database-postgresql is required separately from Flyway 10 onward. Versions are
-             managed by the Spring Boot parent BOM. -->
+        <!-- Flyway: controlled schema migrations for production -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
@@ -142,7 +143,7 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Bounded in-process cache for high-traffic read/external-data paths. -->
+        <!-- Bounded in-process cache -->
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
